@@ -17,6 +17,18 @@ data class ResponseData(
 
 @RestController
 class KodekampController {
+    @GetMapping
+    fun index(): ResponseEntity<String> {
+        return ResponseEntity.ok()
+            .header("Content-Type", "text/html")
+            .body("""
+                <ul>
+                    <li>POST /</li>
+                    <li>GET /ping</li>
+                </ul>
+        """.trimIndent())
+    }
+
     @GetMapping("/ping")
     fun ping(
         @RequestParam(value = "name", defaultValue = "World")
