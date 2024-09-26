@@ -55,6 +55,10 @@ data class Action(
 
 @RestController
 public class KodekampController {
+    companion object {
+        private var unitsCanDoStuff = true
+    }
+
     @PostMapping("/kodekamp")
     fun post(
         @RequestBody body: GameState
@@ -64,7 +68,7 @@ public class KodekampController {
         var gameState = body.copy()
 
         val actions = mutableListOf<List<Action>>()
-        while(moreActionsLeft(gameState)){
+        while(moreActionsLeft(gameState)) {
             actions.add(gameState.friendlyUnits.random().let { unitId ->
                 val (newActions, newGameState) = createTurn(unitId.id, gameState, listOf())
                 gameState = newGameState
@@ -76,6 +80,8 @@ public class KodekampController {
     }
 
     private fun moreActionsLeft(newGameState: GameState): Boolean {
+        println("attac" +newGameState.attackActionsAvailable)
+        println("move" +newGameState.moveActionsAvailable)
         return newGameState.moveActionsAvailable > 0 && newGameState.attackActionsAvailable > 0
     }
 
@@ -85,7 +91,7 @@ public class KodekampController {
         actions: List<Action>,
     ): Pair<List<Action>, GameState> {
         val it = findUnit(unitId, gameState)
-        val action = doAction(it, gameState.friendlyUnits, gameState.enemyUnits)?: return Pair(actions, gameState)
+        val action = doAction(it, gameState)?: return Pair(actions, gameState)
         val newGameState = lagNyGamestate(gameState, action)
         return createTurn(unitId, newGameState, actions + listOf(action))
     }
@@ -94,8 +100,11 @@ public class KodekampController {
         return gameState.friendlyUnits.find { it.id == unitId }!!
     }
 
-    fun doAction(nextUnit: Unit, friendlyUnits: List<Unit>, enemyUnits: List<Unit>): Action? {
-        if (nextUnit.attacks > 0) {
+    fun doAction(nextUnit: Unit, gameState: GameState): Action? {
+        val enemyUnits = gameState.enemyUnits
+        val friendlyUnits = gameState.friendlyUnits
+
+        if (nextUnit.attacks > 0 && gameState.attackActionsAvailable > 0) {
             if (nextUnit.kind == "archer") {
                 val enemies = finnFienderSomKanSkytes(nextUnit, enemyUnits)
                 val enemy = finnSkyteFiende(nextUnit, enemies)
@@ -115,15 +124,7 @@ public class KodekampController {
             }
         }
 
-        if (nextUnit.moves == 0) {
-            return null
-        }
-
-        if (nextUnit.kind == "archer" && friendlyUnits.size > 1) {
-            return null
-        }
-
-        if (nextUnit.kind == "wizard" && friendlyUnits.size > 1) {
+        if (nextUnit.moves == 0 || gameState.moveActionsAvailable == 0) {
             return null
         }
 
