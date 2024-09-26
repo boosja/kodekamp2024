@@ -109,7 +109,7 @@ public class KodekampController {
         val it = findUnit(unitId, gameState)
 
         val canAttack = isEnemyClose(it.x, it.y, gameState.enemyUnits) != null
-        val canMove = findMove(it, listOf(gameState.friendlyUnits, gameState.enemyUnits).flatten()) != null
+        val canMove = findMove(it, gameState.friendlyUnits, gameState.enemyUnits) != null
         if (!canAttack && !canMove) {
             return actions
         }
@@ -149,7 +149,7 @@ public class KodekampController {
             return null
         }
 
-        return findMove(nextUnit, listOf(friendlyUnits, enemyUnits).flatten())
+        return findMove(nextUnit, friendlyUnits, enemyUnits)
     }
 
     fun lagNyGamestate(gameState: GameState, action: Action): GameState {
@@ -192,8 +192,9 @@ public class KodekampController {
         }
     }
 
-    fun findMove(unit: Unit, allUnits: List<Unit>): Action? {
+    fun findMove(unit: Unit, friendlyUnits: List<Unit>, enemyUnits: List<Unit>): Action? {
         val possibleActions = mutableListOf<Action>()
+        val allUnits = listOf(friendlyUnits, enemyUnits).flatten()
 
         if (!allUnits.any { unit.x + 1 == it.x && unit.y == it.y }) {
             possibleActions.add(Action(unit.id, "move", unit.x + 1, unit.y))
@@ -211,19 +212,31 @@ public class KodekampController {
             possibleActions.add(Action(unit.id, "move", unit.x, unit.y - 1))
         }
 
-        var action = possibleActions.random()
-        while (!isWithinBoard(action)) {
-            action = possibleActions.random()
+        val actionsWithinBoard = possibleActions.filter { isWithinBoard(it) }
+
+        val closestEnemy = findClosestEnemy(unit, enemyUnits)
+        return findClosestEnemyByAction(closestEnemy, actionsWithinBoard)
+    }
+
+    fun findClosestEnemy(unit: Unit, enemyUnits: List<Unit>): Unit {
+        return enemyUnits.map { Pair(it, distanceFromEnemy(unit, it)) }.minBy { it.second }.first
+    }
+
+    fun findClosestEnemyByAction(enemy: Unit, actions: List<Action>): Action? {
+        if (actions.isEmpty()) {
+            return null
         }
 
-        return action
+        return actions.map { Pair(it, (it.x + it.y) - (enemy.x + enemy.y)) }.minBy { it.second }?.first ?: null
+    }
+
+    fun distanceFromEnemy(unit: Unit, enemy: Unit): Int {
+        return (enemy.x + enemy.y) - (unit.x + unit.y)
     }
 
     fun finnFienderSomKanSkytes(unit: Unit, enemyUnits: List<Unit>): List<Unit> {
         return enemyUnits.filter {
-            val unitVal = unit.x + unit.y
-            val enemyVal = it.x + it.y
-            (enemyVal - unitVal) <= 4
+            distanceFromEnemy(unit, it) <= 4
         }
     }
 
