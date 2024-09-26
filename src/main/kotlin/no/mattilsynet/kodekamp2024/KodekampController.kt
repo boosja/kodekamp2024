@@ -60,16 +60,14 @@ public class KodekampController {
     ): ResponseEntity<List<Action>> {
 
 
-        var newGameState = body.copy()
+        var gameState = body.copy()
 
         val actions = mutableListOf<List<Action>>()
-        while(moreActionsLeft(newGameState)){
-            actions.add(newGameState.friendlyUnits.random().let { unitId ->
-                val actions = createTurn(unitId.id, newGameState, listOf())
-                actions.forEach { action ->
-                    newGameState = lagNyGamestate(newGameState, action)
-                }
-                actions
+        while(moreActionsLeft(gameState)){
+            actions.add(gameState.friendlyUnits.random().let { unitId ->
+                val (newActions, newGameState) = createTurn(unitId.id, gameState, listOf())
+                gameState = newGameState
+                newActions
             })
         }
 
@@ -84,9 +82,9 @@ public class KodekampController {
         unitId: String,
         gameState: GameState,
         actions: List<Action>,
-    ): List<Action> {
+    ): Pair<List<Action>, GameState> {
         val it = findUnit(unitId, gameState)
-        val action = doAction(it, gameState.friendlyUnits, gameState.enemyUnits)?: return actions
+        val action = doAction(it, gameState.friendlyUnits, gameState.enemyUnits)?: return Pair(actions, gameState)
         val newGameState = lagNyGamestate(gameState, action)
         return createTurn(unitId, newGameState, actions + listOf(action))
     }
