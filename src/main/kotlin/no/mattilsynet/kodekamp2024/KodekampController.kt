@@ -60,28 +60,15 @@ public class KodekampController {
     ): ResponseEntity<List<Action>> {
 
 
-        val actions = body.friendlyUnits.flatMap {
-            val actions = mutableListOf<Action>()
-
-            var attacks = it.attacks
-            var moves = it.moves
-            while (attacks > 0 || moves > 0) {
-
-                val action = doAction(it, body)
-
-                if (action.action == "attack") {
-                    if (attacks == 0) continue
-                    attacks--
-                } else {
-                    if (moves == 0) continue
-                    moves--
-                }
-
-                actions.add(action)
+        var newGameState = body.copy()
+        val actions = body.friendlyUnits.map { it.id }.flatMap { unitId ->
+            val actions = createTurn(unitId, newGameState, listOf())
+            actions.forEach { action ->
+                newGameState = lagNyGamestate(newGameState, action)
             }
-            
             actions
         }
+
 
 
 //        val actions = mutableListOf<Action>(
@@ -93,14 +80,68 @@ public class KodekampController {
         return ResponseEntity.ok(actions)
     }
 
-    fun doAction(unit: Unit, body: GameState): Action {
-        val enemy = isEnemyClose(unit.x, unit.y, body.enemyUnits)
+    private fun createTurn(
+        unitId: String,
+        gameState: GameState,
+        actions: List<Action>,
+    ): List<Action> {
+        val it = findUnit(unitId, gameState)
 
-        return if (enemy != null) {
-            Action(unit.id, "attack", enemy.x, enemy.y)
-        } else {
-            findMove(unit, body.friendlyUnits)
+        val canAttack = isEnemyClose(it.x, it.y, gameState.enemyUnits) != null
+        val canMove = findMove(it, listOf(gameState.friendlyUnits, gameState.enemyUnits).flatten()) != null
+        if (!canAttack && !canMove) {
+            return actions
         }
+
+        if (it.moves == 0 && it.attacks == 0) {
+            return actions
+        }
+
+        val action = doAction(it, gameState.friendlyUnits, gameState.enemyUnits)
+        if (action != null) {
+            val newGameState = lagNyGamestate(gameState, action)
+            return createTurn(unitId, newGameState, actions + listOf(action))
+        }
+
+        return actions
+    }
+
+    fun findUnit(unitId: String, gameState: GameState): Unit {
+        return gameState.friendlyUnits.find { it.id == unitId }!!
+    }
+
+    fun doAction(nextUnit: Unit, friendlyUnits: List<Unit>, enemyUnits: List<Unit>): Action? {
+        val enemy = isEnemyClose(nextUnit.x, nextUnit.y, enemyUnits)
+
+        if (nextUnit.attacks > 0) {
+            if (enemy != null) {
+                return doAttack(nextUnit, enemy)
+            }
+        }
+
+        if (nextUnit.moves == 0) {
+            return null
+        }
+
+        return findMove(nextUnit, listOf(friendlyUnits, enemyUnits).flatten())
+    }
+
+    fun lagNyGamestate(gameState: GameState, action: Action): GameState {
+        return gameState.copy(friendlyUnits = gameState.friendlyUnits.map {
+            if (it.id == action.unit) {
+                if (action.action == "attack") {
+                    it.copy(attacks = it.attacks - 1)
+                } else {
+                    it.copy(x = action.x, y = action.y, moves = it.moves - 1)
+                }
+            } else {
+                it
+            }
+        })
+    }
+
+    fun doAttack(unit: Unit, enemy: Unit): Action {
+        return Action(unit.id, "attack", enemy.x, enemy.y)
     }
 
     fun move(x: Int): Int {
@@ -122,7 +163,7 @@ public class KodekampController {
         }
     }
 
-    fun findMove(unit: Unit, allUnits: List<Unit>): Action {
+    fun findMove(unit: Unit, allUnits: List<Unit>): Action? {
         val possibleActions = mutableListOf<Action>()
 
         if (!allUnits.any { unit.x + 1 == it.x && unit.y == it.y }) {
