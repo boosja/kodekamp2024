@@ -25,7 +25,7 @@ data class GameState(
     val uuid: String
 )
 
-data class Unit (
+data class Unit(
     val y: Int,
     val moves: Int,
     val maxHealth: Int,
@@ -41,7 +41,7 @@ data class Unit (
 
 data class BoardSize(val w: Int, val h: Int)
 
-data class Action (
+data class Action(
     val unit: String,
     val action: String,
     val x: Int,
@@ -60,19 +60,26 @@ public class KodekampController {
     ): ResponseEntity<List<Action>> {
 
 
-
         val actions = body.friendlyUnits.flatMap {
-            val enemy = isEnemyClose(it.x, it.y, body.enemyUnits)
-            val move = findMove(it, body.friendlyUnits)
-
             val actions = mutableListOf<Action>()
-            if (enemy != null) {
-                actions.add(Action(it.id, "attack", enemy.x, enemy.y),)
+
+            var attacks = it.attacks
+            var moves = it.moves
+            while (attacks > 0 || moves > 0) {
+
+                val action = doAction(it, body)
+
+                if (action.action == "attack") {
+                    if (attacks == 0) continue
+                    attacks--
+                } else {
+                    if (moves == 0) continue
+                    moves--
+                }
+
+                actions.add(action)
             }
-
-            actions.add(move)
-
-
+            
             actions
         }
 
@@ -84,6 +91,16 @@ public class KodekampController {
 //        )
 
         return ResponseEntity.ok(actions)
+    }
+
+    fun doAction(unit: Unit, body: GameState): Action {
+        val enemy = isEnemyClose(unit.x, unit.y, body.enemyUnits)
+
+        return if (enemy != null) {
+            Action(unit.id, "attack", enemy.x, enemy.y)
+        } else {
+            findMove(unit, body.friendlyUnits)
+        }
     }
 
     fun move(x: Int): Int {
@@ -99,9 +116,9 @@ public class KodekampController {
     fun isEnemyClose(x: Int, y: Int, enemyUnits: List<Unit>): Unit? {
         return enemyUnits.find {
             it.x == x + 1 && it.y == y ||
-            it.x == x - 1 && it.y == y ||
-            it.y == y + 1 && it.x == x ||
-            it.y == y - 1 && it.x == x
+                    it.x == x - 1 && it.y == y ||
+                    it.y == y + 1 && it.x == x ||
+                    it.y == y - 1 && it.x == x
         }
     }
 
@@ -126,7 +143,7 @@ public class KodekampController {
 
         var action = possibleActions.random()
         while (!isWithinBoard(action)) {
-           action = possibleActions.random()
+            action = possibleActions.random()
         }
 
         return action
