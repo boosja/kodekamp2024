@@ -53,7 +53,7 @@ data class Action (
 //{"it": "it-1", "action": "move",   "x": 1, "y": 2}]
 
 @RestController
-class KodekampController {
+public class KodekampController {
     @PostMapping("/kodekamp")
     fun post(
         @RequestBody body: GameState
@@ -62,13 +62,18 @@ class KodekampController {
 
 
         val actions = body.friendlyUnits.flatMap {
-            val xMove = move(it.x)
-            val yMove = move(it.y)
-            listOf(
-                Action(it.id, "attack", move(it.x), move(it.y)),
-                Action(it.id, "move", xMove, yMove),
-                Action(it.id, "move", move(it.x), move(it.y)),
-            )
+            val enemy = isEnemyClose(it.x, it.y, body.enemyUnits)
+            val move = findMove(it, body.friendlyUnits)
+
+            val actions = mutableListOf<Action>()
+            if (enemy != null) {
+                actions.add(Action(it.id, "attack", enemy.x, enemy.y),)
+            }
+
+            actions.add(move)
+
+
+            actions
         }
 
 
@@ -89,6 +94,46 @@ class KodekampController {
         } else {
             newMove
         }
+    }
+
+    fun isEnemyClose(x: Int, y: Int, enemyUnits: List<Unit>): Unit? {
+        return enemyUnits.find {
+            it.x == x + 1 && it.y == y ||
+            it.x == x - 1 && it.y == y ||
+            it.y == y + 1 && it.x == x ||
+            it.y == y - 1 && it.x == x
+        }
+    }
+
+    fun findMove(unit: Unit, allUnits: List<Unit>): Action {
+        val possibleActions = mutableListOf<Action>()
+
+        if (!allUnits.any { unit.x + 1 == it.x && unit.y == it.y }) {
+            possibleActions.add(Action(unit.id, "move", unit.x + 1, unit.y))
+        }
+
+        if (!allUnits.any { unit.x == it.x && unit.y + 1 == it.y }) {
+            possibleActions.add(Action(unit.id, "move", unit.x, unit.y + 1))
+        }
+
+        if (!allUnits.any { unit.x - 1 == it.x && unit.y == it.y }) {
+            possibleActions.add(Action(unit.id, "move", unit.x - 1, unit.y))
+        }
+
+        if (!allUnits.any { unit.x == it.x && unit.y - 1 == it.y }) {
+            possibleActions.add(Action(unit.id, "move", unit.x, unit.y - 1))
+        }
+
+        var action = possibleActions.random()
+        while (!isWithinBoard(action)) {
+           action = possibleActions.random()
+        }
+
+        return action
+    }
+
+    fun isWithinBoard(action: Action): Boolean {
+        return action.x in 0..3 && action.y in 0..3
     }
 
     @GetMapping
