@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.http.ResponseEntity
 import kotlin.math.absoluteValue
-import kotlin.random.Random
 
 data class RequestData(
     val name: String
@@ -63,12 +62,10 @@ public class KodekampController {
     fun post(
         @RequestBody body: GameState
     ): ResponseEntity<List<Action>> {
-
-
         var gameState = body.copy()
 
         val actions = mutableListOf<List<Action>>()
-        while(moreActionsLeft(gameState)) {
+        while (moreActionsLeft(gameState)) {
             actions.add(gameState.friendlyUnits.random().let { unitId ->
                 val (newActions, newGameState) = createTurn(unitId.id, gameState, listOf())
                 gameState = newGameState
@@ -80,8 +77,8 @@ public class KodekampController {
     }
 
     private fun moreActionsLeft(newGameState: GameState): Boolean {
-        println("attac" +newGameState.attackActionsAvailable)
-        println("move" +newGameState.moveActionsAvailable)
+        println("attac" + newGameState.attackActionsAvailable)
+        println("move" + newGameState.moveActionsAvailable)
         return newGameState.moveActionsAvailable > 0 && newGameState.attackActionsAvailable > 0
     }
 
@@ -91,7 +88,7 @@ public class KodekampController {
         actions: List<Action>,
     ): Pair<List<Action>, GameState> {
         val it = findUnit(unitId, gameState)
-        val action = doAction(it, gameState)?: return Pair(actions, gameState)
+        val action = doAction(it, gameState) ?: return Pair(actions, gameState)
         val newGameState = lagNyGamestate(gameState, action)
         return createTurn(unitId, newGameState, actions + listOf(action))
     }
@@ -166,22 +163,12 @@ public class KodekampController {
         return Action(unit.id, "attack", enemy.x, enemy.y)
     }
 
-    fun move(x: Int): Int {
-        val random = Random.nextInt(0, 1)
-        val newMove = x - random
-        return if (newMove < 0) {
-            x + random
-        } else {
-            newMove
-        }
-    }
-
     fun isEnemyClose(x: Int, y: Int, enemyUnits: List<Unit>): Unit? {
         return enemyUnits.find {
             it.x == x + 1 && it.y == y ||
-                    it.x == x - 1 && it.y == y ||
-                    it.y == y + 1 && it.x == x ||
-                    it.y == y - 1 && it.x == x
+            it.x == x - 1 && it.y == y ||
+            it.y == y + 1 && it.x == x ||
+            it.y == y - 1 && it.x == x
         }
     }
 
@@ -220,27 +207,29 @@ public class KodekampController {
             return null
         }
 
-        return actions.map { Pair(it, (it.x - enemy.x).absoluteValue + (it.y - enemy.y).absoluteValue) }.minBy { it.second }?.first ?: null
+        return actions.map { Pair(it, (it.x - enemy.x).absoluteValue + (it.y - enemy.y).absoluteValue) }
+            .minBy { it.second }.first
     }
 
     fun distanceFromEnemy(unit: Unit, enemy: Unit): Int {
         return (unit.x - enemy.x).absoluteValue + (unit.y - enemy.y).absoluteValue
     }
 
-    fun finnFienderSomKanSkytes(unit: Unit, enemyUnits: List<Unit>): List<Unit> {
-        return enemyUnits.filter {
-            distanceFromEnemy(unit, it) <= 4
-        }
-    }
+    fun finnFienderSomKanSkytes(unit: Unit, enemyUnits: List<Unit>) =
+        findEnemiesWithinRange(unit, enemyUnits, 4)
 
-    fun finnFienderSomKanTrolles(unit: Unit, enemyUnits: List<Unit>): List<Unit> {
-        return enemyUnits.filter {
-            distanceFromEnemy(unit, it) <= 3
-        }
+    fun finnFienderSomKanTrolles(unit: Unit, enemyUnits: List<Unit>) =
+        findEnemiesWithinRange(unit, enemyUnits, 3)
+
+    fun findEnemiesWithinRange(unit: Unit, enemyUnits: List<Unit>, range: Int): List<Unit> {
+        return enemyUnits.filter { distanceFromEnemy(unit, it) <= range }
     }
 
     fun finnSkyteFiende(unit: Unit, enemyUnits: List<Unit>): Unit? =
-        if (enemyUnits.isNotEmpty()) enemyUnits.random() else null
+        if (enemyUnits.isNotEmpty())
+            enemyUnits.random()
+        else
+            null
 
     fun isWithinBoard(action: Action): Boolean {
         return action.x in 0..3 && action.y in 0..3
