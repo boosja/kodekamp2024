@@ -62,16 +62,6 @@ public class KodekampController {
 
         var newGameState = body.copy()
 
-        /*
-        val actions = body.friendlyUnits.map { it.id }.flatMap { unitId ->
-            val actions = createTurn(unitId, newGameState, listOf())
-            actions.forEach { action ->
-                newGameState = lagNyGamestate(newGameState, action)
-            }
-
-            actions
-        }*/
-
         val actions = mutableListOf<List<Action>>()
         while(moreActionsLeft(newGameState)){
             actions.add(newGameState.friendlyUnits.random().let { unitId ->
@@ -79,20 +69,9 @@ public class KodekampController {
                 actions.forEach { action ->
                     newGameState = lagNyGamestate(newGameState, action)
                 }
-
                 actions
             })
         }
-
-
-
-
-
-//        val actions = mutableListOf<Action>(
-//            Action("unit-3", "move", 2, 2),
-//            Action("unit-3", "attack", 1, 2),
-//            Action("unit-4", "move", 3, 2),
-//        )
 
         return ResponseEntity.ok(actions.flatten())
     }
@@ -107,24 +86,9 @@ public class KodekampController {
         actions: List<Action>,
     ): List<Action> {
         val it = findUnit(unitId, gameState)
-
-        val canAttack = isEnemyClose(it.x, it.y, gameState.enemyUnits) != null
-        val canMove = findMove(it, gameState.friendlyUnits, gameState.enemyUnits) != null
-        if (!canAttack && !canMove) {
-            return actions
-        }
-
-        if (it.moves == 0 && it.attacks == 0) {
-            return actions
-        }
-
-        val action = doAction(it, gameState.friendlyUnits, gameState.enemyUnits)
-        if (action != null) {
-            val newGameState = lagNyGamestate(gameState, action)
-            return createTurn(unitId, newGameState, actions + listOf(action))
-        }
-
-        return actions
+        val action = doAction(it, gameState.friendlyUnits, gameState.enemyUnits)?: return actions
+        val newGameState = lagNyGamestate(gameState, action)
+        return createTurn(unitId, newGameState, actions + listOf(action))
     }
 
     fun findUnit(unitId: String, gameState: GameState): Unit {
@@ -133,7 +97,7 @@ public class KodekampController {
 
     fun doAction(nextUnit: Unit, friendlyUnits: List<Unit>, enemyUnits: List<Unit>): Action? {
         if (nextUnit.attacks > 0) {
-            if (nextUnit.kind === "archer") {
+            if (nextUnit.kind == "archer") {
                 val enemies = finnFienderSomKanSkytes(nextUnit, enemyUnits)
                 val enemy = finnSkyteFiende(nextUnit, enemies)
                 return doAttack(nextUnit, enemy)
@@ -146,6 +110,10 @@ public class KodekampController {
         }
 
         if (nextUnit.moves == 0) {
+            return null
+        }
+
+        if (nextUnit.kind == "archer" && friendlyUnits.size > 1) {
             return null
         }
 
