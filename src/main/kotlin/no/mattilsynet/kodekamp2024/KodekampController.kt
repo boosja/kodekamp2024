@@ -61,13 +61,30 @@ public class KodekampController {
 
 
         var newGameState = body.copy()
+
+        /*
         val actions = body.friendlyUnits.map { it.id }.flatMap { unitId ->
             val actions = createTurn(unitId, newGameState, listOf())
             actions.forEach { action ->
                 newGameState = lagNyGamestate(newGameState, action)
             }
+
             actions
+        }*/
+
+        val actions = mutableListOf<List<Action>>()
+        while(moreActionsLeft(newGameState)){
+            actions.add(newGameState.friendlyUnits.random().let { unitId ->
+                val actions = createTurn(unitId.id, newGameState, listOf())
+                actions.forEach { action ->
+                    newGameState = lagNyGamestate(newGameState, action)
+                }
+
+                actions
+            })
         }
+
+
 
 
 
@@ -77,7 +94,11 @@ public class KodekampController {
 //            Action("unit-4", "move", 3, 2),
 //        )
 
-        return ResponseEntity.ok(actions)
+        return ResponseEntity.ok(actions.flatten())
+    }
+
+    private fun moreActionsLeft(newGameState: GameState): Boolean {
+        return newGameState.moveActionsAvailable > 0 && newGameState.attackActionsAvailable >0
     }
 
     private fun createTurn(
@@ -111,9 +132,14 @@ public class KodekampController {
     }
 
     fun doAction(nextUnit: Unit, friendlyUnits: List<Unit>, enemyUnits: List<Unit>): Action? {
-        val enemy = isEnemyClose(nextUnit.x, nextUnit.y, enemyUnits)
-
         if (nextUnit.attacks > 0) {
+            if (nextUnit.kind === "archer") {
+                val enemies = finnFienderSomKanSkytes(nextUnit, enemyUnits)
+                val enemy = finnSkyteFiende(nextUnit, enemies)
+                return doAttack(nextUnit, enemy)
+            }
+
+            val enemy = isEnemyClose(nextUnit.x, nextUnit.y, enemyUnits)
             if (enemy != null) {
                 return doAttack(nextUnit, enemy)
             }
@@ -127,7 +153,10 @@ public class KodekampController {
     }
 
     fun lagNyGamestate(gameState: GameState, action: Action): GameState {
-        return gameState.copy(friendlyUnits = gameState.friendlyUnits.map {
+        return gameState.copy(
+            attackActionsAvailable = if(action.action == "attack" ) gameState.attackActionsAvailable-1 else gameState.attackActionsAvailable ,
+            moveActionsAvailable = if(action.action == "move" ) gameState.moveActionsAvailable-1 else gameState.moveActionsAvailable,
+            friendlyUnits = gameState.friendlyUnits.map {
             if (it.id == action.unit) {
                 if (action.action == "attack") {
                     it.copy(attacks = it.attacks - 1)
@@ -189,6 +218,16 @@ public class KodekampController {
 
         return action
     }
+
+    fun finnFienderSomKanSkytes(unit: Unit, enemyUnits: List<Unit>): List<Unit> {
+        return enemyUnits.filter {
+            val unitVal = unit.x + unit.y
+            val enemyVal = it.x + it.y
+            (enemyVal - unitVal) <= 4
+        }
+    }
+
+    fun finnSkyteFiende(unit: Unit, enemyUnits: List<Unit>) = enemyUnits.random()
 
     fun isWithinBoard(action: Action): Boolean {
         return action.x in 0..3 && action.y in 0..3
