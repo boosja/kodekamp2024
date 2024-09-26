@@ -101,6 +101,11 @@ public class KodekampController {
                 val enemy = finnSkyteFiende(nextUnit, enemies)
                 return doAttack(nextUnit, enemy)
             }
+            if (nextUnit.kind == "wizard") {
+                val enemies = finnFienderSomKanTrolles(nextUnit, enemyUnits)
+                val enemy = finnSkyteFiende(nextUnit, enemies)
+                return doAttack(nextUnit, enemy)
+            }
 
             val enemy = isEnemyClose(nextUnit.x, nextUnit.y, enemyUnits)
             if (enemy != null) {
@@ -113,6 +118,10 @@ public class KodekampController {
         }
 
         if (nextUnit.kind == "archer" && friendlyUnits.size > 1) {
+            return null
+        }
+
+        if (nextUnit.kind == "wizard" && friendlyUnits.size > 1) {
             return null
         }
 
@@ -204,6 +213,12 @@ public class KodekampController {
     fun finnFienderSomKanSkytes(unit: Unit, enemyUnits: List<Unit>): List<Unit> {
         return enemyUnits.filter {
             distanceFromEnemy(unit, it) <= 4
+        }
+    }
+
+    fun finnFienderSomKanTrolles(unit: Unit, enemyUnits: List<Unit>): List<Unit> {
+        return enemyUnits.filter {
+            distanceFromEnemy(unit, it) <= 3
         }
     }
 
