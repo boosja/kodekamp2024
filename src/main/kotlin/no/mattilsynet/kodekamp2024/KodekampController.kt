@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.http.ResponseEntity
+import kotlin.math.absoluteValue
 import kotlin.random.Random
 
 data class RequestData(
@@ -193,11 +194,11 @@ public class KodekampController {
             return null
         }
 
-        return actions.map { Pair(it, (it.x + it.y) - (enemy.x + enemy.y)) }.minBy { it.second }?.first ?: null
+        return actions.map { Pair(it, (it.x - enemy.x).absoluteValue + (it.y - enemy.y).absoluteValue) }.minBy { it.second }?.first ?: null
     }
 
     fun distanceFromEnemy(unit: Unit, enemy: Unit): Int {
-        return (enemy.x + enemy.y) - (unit.x + unit.y)
+        return (unit.x - enemy.x).absoluteValue + (unit.y - enemy.y).absoluteValue
     }
 
     fun finnFienderSomKanSkytes(unit: Unit, enemyUnits: List<Unit>): List<Unit> {

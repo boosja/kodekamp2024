@@ -17,6 +17,38 @@ class KodekampControllerTest{
         assertEquals(enemy, result)
     }
 
+    @Test
+    fun distanceFromEnemy() {
+        val kodekamp = KodekampController()
+
+        val result = kodekamp.distanceFromEnemy(testUnit().copy(x = 0, y = 0), testUnit().copy(x = 3, y = 3))
+        assertEquals(6, result)
+    }
+
+    @Test
+    fun distanceFromEnemy2() {
+        val kodekamp = KodekampController()
+
+        val result = kodekamp.distanceFromEnemy(testUnit().copy(x = 2, y = 0), testUnit().copy(x = 3, y = 3))
+        assertEquals(4, result)
+    }
+
+    @Test
+    fun distanceFromEnemy3() {
+        val kodekamp = KodekampController()
+
+        val result = kodekamp.distanceFromEnemy(testUnit().copy(x = 3, y = 3), testUnit().copy(x = 0, y = 0))
+        assertEquals(6, result)
+    }
+
+    @Test
+    fun distanceFromEnemy4() {
+        val kodekamp = KodekampController()
+
+        val result = kodekamp.distanceFromEnemy(testUnit().copy(x = 0, y = 3), testUnit().copy(x = 2, y = 0))
+        assertEquals(5, result)
+    }
+
 }
 
 
